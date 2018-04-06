@@ -1,0 +1,3 @@
+SELECT * FROM hivesampletable
+	WHERE devicemake LIKE "HTC%"
+	LIMIT 20;

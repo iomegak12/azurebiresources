@@ -1,0 +1,176 @@
+wasb://iomegastoragecontainer@iomegastorageaccount.blob.core.windows.net/HdiSamples/WebsiteLogSampleData/SampleLog/
+
+DROP TABLE IF EXISTS weblogs;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS weblogs(
+	s_date date, 
+	s_time string, 
+	s_sitename string, 
+	cs_method string, 
+	cs_uristem string, 
+        cs_uriquery string, 
+	s_port int, 
+	cs_username string, 
+	c_ip string, 
+	cs_useragent string, 
+        cs_cookie string, 
+	cs_referer string, 
+	cs_host string, 
+	sc_status int, 
+	sc_substatus int,
+        sc_win32status int, 
+	sc_bytes int, 
+	cs_bytes int, 
+	s_timetaken int ) 
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ' ' 
+STORED AS TEXTFILE LOCATION 'wasb://iomegastoragecontainer@iomegastorageaccount.blob.core.windows.net/HdiSamples/WebsiteLogSampleData/SampleLog/' 
+TBLPROPERTIES ('skip.header.line.count'='2');
+
+DROP TABLE IF EXISTS ClientErrors;
+
+CREATE EXTERNAL TABLE ClientErrors(sc_status int, cs_referer string, cs_page string, cnt int) 
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ',';
+
+INSERT OVERWRITE TABLE ClientErrors
+SELECT sc_status, cs_referer, 
+        concat(cs_uristem,'?', regexp_replace(cs_uriquery,'X-ARR-LOG-ID=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}','')) cs_page,
+        count(distinct c_ip) as cnt
+FROM weblogs 
+WHERE sc_status >=400 and sc_status < 500 
+GROUP BY sc_status, cs_referer, concat(cs_uristem,'?', regexp_replace(cs_uriquery,'X-ARR-LOG-ID=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}','')) 
+ORDER BY cnt;
+
+DROP TABLE IF EXISTS RefersPerDay;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS RefersPerDay(year int, month int, day int, cs_referer string, cnt int) 
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','; 
+
+INSERT OVERWRITE TABLE RefersPerDay
+SELECT year(s_date), month(s_date), day(s_date), cs_referer, count(distinct c_ip) as cnt 
+FROM weblogs
+WHERE sc_status >=200 and sc_status <300
+GROUP BY s_date, cs_referer
+ORDER BY cnt desc;
+
+
+
+-------------------------- Twitter Analysis
+
+DROP TABLE IF EXISTS HDISample_Tweets_raw;
+
+--create the raw Tweets table on json formatted twitter data
+CREATE EXTERNAL TABLE HDISample_Tweets_raw(json_response STRING)
+STORED AS TEXTFILE LOCATION 'wasb://iomegastoragecontainer@iomegastorageaccount.blob.core.windows.net/HdiSamples/TwitterTrendsSampleData/';
+
+DROP TABLE IF EXISTS HDISample_Tweets;
+CREATE TABLE HDISample_Tweets(
+    id BIGINT,
+    created_at STRING,
+    created_at_date STRING,
+    created_at_year STRING,
+    created_at_month STRING,
+    created_at_day STRING,
+    created_at_time STRING,
+    in_reply_to_user_id_str STRING,
+    text STRING,
+    contributors STRING,
+    retweeted STRING,
+    truncated STRING,
+    coordinates STRING,
+    source STRING,
+    retweet_count INT,
+    url STRING,
+    hashtags array<STRING>,
+    user_mentions array<STRING>,
+    first_hashtag STRING,
+    first_user_mention STRING,
+    screen_name STRING,
+    name STRING,
+    followers_count INT,
+    listed_count INT,
+    friends_count INT,
+    lang STRING,
+    user_location STRING,
+    time_zone STRING,
+    profile_image_url STRING,
+    json_response STRING);
+
+FROM HDISample_Tweets_raw
+INSERT OVERWRITE TABLE HDISample_Tweets
+SELECT
+    CAST(get_json_object(json_response, '$.id_str') as BIGINT),
+    get_json_object(json_response, '$.created_at'),
+    CONCAT(SUBSTR (get_json_object(json_response, '$.created_at'),1,10),' ',
+    SUBSTR (get_json_object(json_response, '$.created_at'),27,4)),
+    SUBSTR (get_json_object(json_response, '$.created_at'),27,4),
+    CASE SUBSTR (get_json_object(json_response, '$.created_at'),5,3)
+        WHEN 'Jan' then '01'
+        WHEN 'Feb' then '02'
+        WHEN 'Mar' then '03'
+        WHEN 'Apr' then '04'
+        WHEN 'May' then '05'
+        WHEN 'Jun' then '06'
+        WHEN 'Jul' then '07'
+        WHEN 'Aug' then '08'
+        WHEN 'Sep' then '09'
+        WHEN 'Oct' then '10'
+        WHEN 'Nov' then '11'
+        WHEN 'Dec' then '12' end,
+    SUBSTR (get_json_object(json_response, '$.created_at'),9,2),
+    SUBSTR (get_json_object(json_response, '$.created_at'),12,8),
+    get_json_object(json_response, '$.in_reply_to_user_id_str'),
+    get_json_object(json_response, '$.text'),
+    get_json_object(json_response, '$.contributors'),
+    get_json_object(json_response, '$.retweeted'),
+    get_json_object(json_response, '$.truncated'),
+    get_json_object(json_response, '$.coordinates'),
+    get_json_object(json_response, '$.source'),
+    CAST (get_json_object(json_response, '$.retweet_count') as INT),
+    get_json_object(json_response, '$.entities.display_url'),
+    ARRAY(  
+        TRIM(LOWER(get_json_object(json_response, '$.entities.hashtags[0].text'))),
+        TRIM(LOWER(get_json_object(json_response, '$.entities.hashtags[1].text'))),
+        TRIM(LOWER(get_json_object(json_response, '$.entities.hashtags[2].text'))),
+        TRIM(LOWER(get_json_object(json_response, '$.entities.hashtags[3].text'))),
+        TRIM(LOWER(get_json_object(json_response, '$.entities.hashtags[4].text')))),
+    ARRAY(
+        TRIM(LOWER(get_json_object(json_response, '$.entities.user_mentions[0].screen_name'))),
+        TRIM(LOWER(get_json_object(json_response, '$.entities.user_mentions[1].screen_name'))),
+        TRIM(LOWER(get_json_object(json_response, '$.entities.user_mentions[2].screen_name'))),
+        TRIM(LOWER(get_json_object(json_response, '$.entities.user_mentions[3].screen_name'))),
+        TRIM(LOWER(get_json_object(json_response, '$.entities.user_mentions[4].screen_name')))),
+    TRIM(LOWER(get_json_object(json_response, '$.entities.hashtags[0].text'))),
+    TRIM(LOWER(get_json_object(json_response, '$.entities.user_mentions[0].screen_name'))),
+    get_json_object(json_response, '$.user.screen_name'),
+    get_json_object(json_response, '$.user.name'),
+    CAST (get_json_object(json_response, '$.user.followers_count') as INT),
+    CAST (get_json_object(json_response, '$.user.listed_count') as INT),
+    CAST (get_json_object(json_response, '$.user.friends_count') as INT),
+    get_json_object(json_response, '$.user.lang'),
+    get_json_object(json_response, '$.user.location'),
+    get_json_object(json_response, '$.user.time_zone'),
+    get_json_object(json_response, '$.user.profile_image_url'),
+    json_response
+WHERE (LENGTH(json_response) > 500);
+
+
+DROP TABLE IF EXISTS HDISample_topusers;
+
+--create the topusers hive table by selecting from the HDISample_Tweets table
+CREATE TABLE IF NOT EXISTS  HDISample_topusers(name STRING, screen_name STRING, tweet_count INT);
+
+INSERT OVERWRITE TABLE  HDISample_topusers
+SELECT name, screen_name, count(1) as cc
+    FROM HDISample_Tweets
+    WHERE text LIKE '%Azure%'
+    GROUP BY name, screen_name
+    ORDER BY cc DESC LIMIT 10;
+
+
+------------------------ Mahout Query --------------------------
+
+hadoop jar C:\apps\dist\mahout-1.0.0.2.3.3.1-25\examples\target\mahout-examples-1.0.0.2.3.3.1-25-job.jar org.apache.mahout.cf.taste.hadoop.item.RecommenderJob 
+    -s SIMILARITY_COOCCURRENCE 
+    --input wasb:///HdiSamples/MahoutMovieData/user-ratings.txt 
+    --output wasb:///HdiSamples/MahoutMovieData/out
+    --tempDir wasb:///HdiSamples/MahoutMovieData/temp

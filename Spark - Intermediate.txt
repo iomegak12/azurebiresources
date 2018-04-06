@@ -1,0 +1,19 @@
+
+https://CLUSTERNAME.azurehdinsight.net/jupyter
+
+from pyspark.sql import *
+hvacText = sc.textFile("wasbs:///HdiSamples/HdiSamples/SensorSampleData/hvac/HVAC.csv")
+Entry = Row('Date', 'Time', 'TargetTemp', 'ActualTemp', 'BuildingID')
+hvacParts = hvacText.map(lambda s: s.split(',')).filter(lambda s: s[0] != 'Date')
+hvac = hvacParts.map(lambda p: Entry(str(p[0]), str(p[1]), int(p[2]), int(p[3]), int(p[6])))
+
+hvacTable = sqlContext.createDataFrame(hvac)
+hvacTable.registerTempTable('hvactemptable')
+dfw = DataFrameWriter(hvacTable)
+dfw.saveAsTable('hvac')
+
+%%sql
+SHOW TABLES
+
+%%sql
+SELECT * FROM hvac LIMIT 10
