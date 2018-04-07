@@ -1,0 +1,17 @@
+
+	Messaging Solutions in Azure
+
+
+		Cloud Queue		-	Simplified Messaging
+		Service Bus		-	Enterprise Featuristic Messaging
+							(Transactions, Session, TTL, DLQ, Batch, Partitioning)
+							(HTTP(s), AMQP, MQTT)
+		Event Hub		-	Streamed Messaging
+			IoT Hub		-	Streaming Messaging with Two-way communication (Devices/Applications)
+							@ Scale
+						(AMQP and MQTT)
+		Event Grid		-	Infrastructure-less / Serverless Messaging that supports
+							Publish/Subscribe	
+						(HTTP(s))
+
+		

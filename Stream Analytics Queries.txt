@@ -1,0 +1,29 @@
+SELECT
+    *
+FROM
+    [twitteranalysis]
+
+SELECT System.TimeStamp as Time, Topic, COUNT(*)
+FROM [twitteranalysis] TIMESTAMP BY CreatedAt
+GROUP BY TUMBLINGWINDOW(s,5), Topic
+
+SELECT System.TimeStamp as Time, Topic, COUNT(*) as Mentions
+FROM [twitteranalysis]
+TIMESTAMP BY CreatedAt
+GROUP BY SLIDINGWINDOW(s, 5), Topic
+HAVING COUNT(*) > 15
+
+
+SELECT System.TimeStamp as Time, Topic, COUNT(*) as Mentions
+FROM [twitteranalysis]
+TIMESTAMP BY CreatedAt
+GROUP BY SLIDINGWINDOW(s, 5), Topic
+HAVING COUNT(*) > 5
+
+SELECT System.TimeStamp as Time, Topic, COUNT(*),
+AVG(SentimentScore),
+MIN(SentimentScore),
+MAX(SentimentScore),
+STDEV(SentimentScore)
+FROM [twitteranalysis] TIMESTAMP BY CreatedAt
+GROUP BY TUMBLINGWINDOW(s,5), Topic

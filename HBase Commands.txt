@@ -1,0 +1,23 @@
+hbase shell
+
+create 'Contacts', 'Personal', 'Office'
+list
+
+
+put 'Contacts', '1000', 'Personal:Name', 'John Dole'
+put 'Contacts', '1000', 'Personal:Phone', '1-425-000-0001'
+put 'Contacts', '1000', 'Office:Phone', '1-425-000-0002'
+put 'Contacts', '1000', 'Office:Address', '1111 San Gabriel Dr.'
+scan 'Contacts'
+
+hbase org.apache.hadoop.hbase.mapreduce.ImportTsv -Dimporttsv.columns="HBASE_ROW_KEY,Personal:Name,Personal:Phone,Office:Phone,Office:Address" Contacts wasb://hadoopclustercontainerv2@iomegastorage.blob.core.windows.net/HdiSamples/Contacts.txt
+
+CREATE EXTERNAL TABLE hbasecontacts(rowkey STRING, name STRING, homephone STRING, officephone STRING, officeaddress STRING)
+STORED BY 'org.apache.hadoop.hive.hbase.HBaseStorageHandler'
+WITH SERDEPROPERTIES ('hbase.columns.mapping' = ':key,Personal:Name,Personal:Phone,Office:Phone,Office:Address')
+TBLPROPERTIES ('hbase.table.name' = 'Contacts');
+
+curl -u <UserName>:<Password> -G https://<ClusterName>.azurehdinsight.net/hbaserest/
+
+curl -u <UserName>:<Password> -X GET "https://<ClusterName>.azurehdinsight.net/hbaserest/Contacts/1000" -H "Accept: application/json" -v
+

@@ -1,0 +1,22 @@
+
+Day 2 Agenda
+
+	. Demonstration on Provisioning HD Insight Cluster with ARM Templates
+		(Scripted)
+
+		- Provisioning Dependencies of Azure Resources
+		- Provisioning KV Resources for Credentials
+
+	. Pig Jobs in Hadoop Cluster
+	. Hive
+	. Sqoop
+	. HBase
+
+	. Lecture on EH, SA and PowerBI for Real-time Visualization
+	. Demo - Case Study - Event Hubs, Stream Analytics and PowerBI Visualization
+
+	. Lecture on ADF
+	. v2 Enhancements
+	. Demonstration on DF
+
+	. Lecture on ADL, Features*	
