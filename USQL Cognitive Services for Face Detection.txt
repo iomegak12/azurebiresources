@@ -1,0 +1,18 @@
+REFERENCE ASSEMBLY ImageCommon; 
+REFERENCE ASSEMBLY FaceSdk;       
+
+@faces_from_extractor =
+    EXTRACT FileName string, 
+        NumFaces int, 
+        FaceIndex int, 
+        RectX float, RectY float, Width float, Height float, 
+        FaceAge int, 
+        FaceGender string
+    FROM @"/usqlext/samples/cognition/5968074406_2.jpg"
+    USING new Cognition.Vision.FaceDetectionExtractor();
+
+OUTPUT @faces_from_extractor
+TO "/ReferenceGuide/Cognition/Vision/FaceDetectionExtractor.txt"
+USING Outputters.Tsv(outputHeader: true);
+
+

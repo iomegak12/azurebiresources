@@ -1,0 +1,11 @@
+REFERENCE ASSEMBLY ImageCommon; 
+REFERENCE ASSEMBLY ImageOcr;
+
+@ocrs=EXTRACT FileName string,
+	Text string
+FROM @"/usqlext/samples/cognition/5968074406_2.jpg"
+USING new Cognition.Vision.OcrExtractor();
+
+OUTPUT @ocrs
+TO "/ReferenceGuide/Cognition/Vision/OcrExtractor.txt"
+USING Outputters.Tsv(outputHeader: true);
